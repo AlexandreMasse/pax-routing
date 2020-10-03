@@ -1,0 +1,26 @@
+{
+  "name": " ",
+  "version": "0.0.1",
+  "description": "",
+  "keywords": "",
+  "license": "",
+  "author": "",
+  "scripts": {
+    "build": "parcel build index.html",
+    "dev": "parcel index.html --open",
+    "start": "npm run build && npm run dev"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.11.6",
+    "@babel/preset-react": "^7.10.4",
+    "babel-preset-env": "^1.7.0",
+    "parcel-bundler": "^1.12.4"
+  },
+  "dependencies": {
+    "@turf/turf": "^5.1.6",
+    "data": "^0.6.1",
+    "geojson-path-finder": "git+https://github.com/iowahc/geojson-path-finder.git",
+    "lodash": "^4.17.20",
+    "mapbox-gl": "^1.12.0"
+  }
+}
