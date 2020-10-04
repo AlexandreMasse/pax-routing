@@ -1,10 +1,8 @@
 {
-  "name": " ",
+  "name": "pax-routing",
   "version": "0.0.1",
   "description": "",
-  "keywords": "",
-  "license": "",
-  "author": "",
+  "author": "Alexandre Massé",
   "scripts": {
     "build": "parcel build index.html",
     "dev": "parcel index.html --open",
@@ -18,6 +16,7 @@
   },
   "dependencies": {
     "@turf/turf": "^5.1.6",
+    "dat.gui": "^0.7.7",
     "data": "^0.6.1",
     "geojson-path-finder": "git+https://github.com/iowahc/geojson-path-finder.git",
     "lodash": "^4.17.20",
