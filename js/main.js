@@ -14,6 +14,7 @@ const info = document.querySelector('.info')
 
 const configuration = {
   showTiles: false,
+  middleMarker: false,
   pathType: 'curved',
   pathWidth: 8,
   pathColor: '#000000',
@@ -122,6 +123,25 @@ const markerStart = new mapboxgl.Marker({
   .setLngLat([2.5731, 49.1360])
   .addTo(map)
 
+// middle markers
+
+const markerMiddleOnLine = new mapboxgl.Marker({
+  color: '#f1d6b5',
+  scale: 0.8
+})
+  .setLngLat([0, 0])
+
+if (configuration.middleMarker) markerMiddleOnLine.addTo(map)
+
+const markerMiddle = new mapboxgl.Marker({
+  draggable: true,
+  color: '#be7b06',
+  scale: 1
+})
+  .setLngLat([2.5708, 49.1350])
+
+if (configuration.middleMarker) markerMiddle.addTo(map)
+
 // end markers
 
 const markerEndOnLine = new mapboxgl.Marker({
@@ -150,50 +170,74 @@ const routesMultiLineString = turf.multiLineString(geoJsonRoutes.features.map(fe
 
 const updatePath = () => {
 
-  // get start and end with draggable markers
+  const markers = [markerStart, configuration.middleMarker && markerMiddle, markerEnd].filter(v => !!v)
+  const markersOnLine = [markerStartOnLine, configuration.middleMarker && markerMiddleOnLine, markerEndOnLine].filter(v => !!v)
 
-  const startPoint = turf.point([markerStart.getLngLat().lng, markerStart.getLngLat().lat])
-  const endPoint = turf.point([markerEnd.getLngLat().lng, markerEnd.getLngLat().lat])
+  const paths = []
 
-  // get nearest point on routes for start and end
+  // loop in markers to calculate path between each waypoints & store each path in paths array
 
-  const nearestStartPointOnLine = turf.nearestPointOnLine(routesMultiLineString, startPoint)
-  const nearestEndPointOnLine = turf.nearestPointOnLine(routesMultiLineString, endPoint)
+  for (let i = 0; i < markers.length - 1; i++) {
 
-  // set nearest markers coordinate
+    const start = markers[i]
+    const end = markers[i + 1]
 
-  markerStartOnLine.setLngLat(nearestStartPointOnLine.geometry.coordinates)
-  markerEndOnLine.setLngLat(nearestEndPointOnLine.geometry.coordinates)
+    // get start and end point
 
-  // calculate path
+    const startPoint = turf.point([start.getLngLat().lng, start.getLngLat().lat])
+    const endPoint = turf.point([end.getLngLat().lng, end.getLngLat().lat])
 
-  const path = pathFinder.findPath(nearestStartPointOnLine, nearestEndPointOnLine)
-  if (!path) {
-    console.warn('path not found')
-    return 
+    // get nearest point on routes for start and end
+
+    const nearestStartPointOnLine = turf.nearestPointOnLine(routesMultiLineString, startPoint)
+    const nearestEndPointOnLine = turf.nearestPointOnLine(routesMultiLineString, endPoint)
+
+    // set nearest markers coordinate
+
+    markersOnLine[i].setLngLat(nearestStartPointOnLine.geometry.coordinates)
+    markersOnLine[i + 1].setLngLat(nearestEndPointOnLine.geometry.coordinates)
+
+    // calculate path
+
+    const path = pathFinder.findPath(nearestStartPointOnLine, nearestEndPointOnLine)
+    if (!path) {
+      console.warn('path not found')
+      return
+    }
+
+    // add path to paths array
+
+    paths.push(path)
   }
 
-  // tranform to LineString object
+  // combine paths
 
-  const pathLineString = turf.lineString(path.path)
+  const pathsCombined = paths.map(path => (path.path)).reduce((acc, current) => [...acc, ...current])
+
+  // tranform paths to LineString object
+
+  const pathLineString = turf.lineString(pathsCombined)
 
   // simplify & curve path
 
   const pathLineStringSimplified = turf.simplify(pathLineString, {tolerance: configuration.pathSimplification})
-  const pathLineStringCurved = turf.bezierSpline(pathLineStringSimplified, {resolution: 30000, sharpness: configuration.pathCurveSharpness})
+  const pathLineStringCurved = turf.bezierSpline(pathLineStringSimplified, {
+    resolution: 30000,
+    sharpness: configuration.pathCurveSharpness
+  })
 
   // update path on map
 
   switch (configuration.pathType) {
     case 'raw':
       map.getSource('path').setData(pathLineString)
-      break;
+      break
     case 'simplified':
       map.getSource('path').setData(pathLineStringSimplified)
-      break;
+      break
     case 'curved':
       map.getSource('path').setData(pathLineStringCurved)
-      break;
+      break
   }
 
   // update info
@@ -207,6 +251,7 @@ const updatePath = () => {
 // EVENTS
 
 markerStart.on('drag', throttle(updatePath, 100))
+markerMiddle.on('drag', throttle(updatePath, 100))
 markerEnd.on('drag', throttle(updatePath, 100))
 
 
@@ -218,6 +263,19 @@ gui.add(configuration, 'showTiles')
   .name('Show tiles')
   .onChange(value => {
     map.setLayoutProperty('tiles', 'visibility', value ? 'visible' : 'none')
+  })
+
+gui.add(configuration, 'middleMarker')
+  .name('Add waypoint')
+  .onChange(value => {
+    if (value) {
+      markerMiddle.addTo(map)
+      markerMiddleOnLine.addTo(map)
+    } else {
+      markerMiddle.remove()
+      markerMiddleOnLine.remove()
+    }
+    updatePath()
   })
 
 // path folder
